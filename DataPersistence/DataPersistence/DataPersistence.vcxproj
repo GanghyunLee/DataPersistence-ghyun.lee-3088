@@ -154,7 +154,9 @@
 
   <ItemGroup>
     <ClInclude Include="JsonValue.h" />
+    <ClInclude Include="JsonParser.h" />
     <ClCompile Include="JsonValue.cpp" />
+    <ClCompile Include="JsonParser.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
