@@ -908,10 +908,13 @@ PlayerSaveData SaveManager::load(const std::string& path) {
   </ItemGroup>
 ```
 
-- [ ] **Step 4: `main.cpp` 갱신 (전체 데모 시나리오)**
+- [ ] **Step 4: `main.cpp` 갱신 (전체 데모 시나리오, 손상된 파일 복구까지 자동 검증)**
+
+이전 버전은 손상된 파일 대체 경로를 수동으로(PowerShell로 `save.json`을 직접 덮어쓴 뒤 재실행) 확인하도록 했었다. 하지만 `main()`이 매 실행 시작 시 `std::filesystem::remove(savePath)`로 `save.json`을 무조건 삭제하기 때문에, 그 수동 절차대로 실행 파일을 재실행하면 미리 손상시켜 둔 파일이 `load()`가 열어보기도 전에 지워져 버려 손상 경로를 확인할 수 없었다 (계획 문서 자체의 결함이었음). 이를 고쳐 4)번 단계에서 실행 중에 직접 `save.json`을 손상된 텍스트로 덮어쓴 뒤 바로 `load()`를 호출하도록 시나리오에 포함시켜, 매 실행마다 결정적으로 손상 복구 경로까지 검증되도록 한다.
 
 ```cpp
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include "SaveManager.h"
@@ -946,6 +949,14 @@ int main() {
     PlayerSaveData reloaded = SaveManager::load(savePath);
     printData(reloaded);
 
+    std::cout << std::endl << "4) 손상된 파일 로드 (경고 후 기본값 기대):" << std::endl;
+    {
+        std::ofstream corrupted(savePath, std::ios::trunc);
+        corrupted << "{not valid json";
+    }
+    PlayerSaveData afterCorruption = SaveManager::load(savePath);
+    printData(afterCorruption);
+
     return 0;
 }
 ```
@@ -955,9 +966,9 @@ int main() {
 Run: `msbuild DataPersistence.slnx /p:Configuration=Debug /p:Platform=x64`
 Expected: `Build succeeded.`
 
-- [ ] **Step 6: 실행 및 콘솔 출력 확인**
+- [ ] **Step 6: 실행 및 콘솔 출력 확인 (정상 시나리오 + 손상 파일 복구 시나리오 모두 자동 검증)**
 
-Run: `.\build\x64\Debug\DataPersistence.exe` (실행 디렉터리 기준으로 `save.json`이 생성/삭제됨)
+Run: `.\build\x64\Debug\DataPersistence.exe` (실행 디렉터리 기준으로 `save.json`이 생성/삭제/재작성됨)
 Expected (정확히 일치):
 
 ```
@@ -975,19 +986,18 @@ playerName: Hero
 level: 7
 hp: 55/100
 position: (10, 20, 30)
+
+4) 손상된 파일 로드 (경고 후 기본값 기대):
+저장 파일이 손상되어 기본값으로 대체합니다: Expected '"' in JSON input
+playerName: Hero
+level: 1
+hp: 100/100
+position: (0, 0, 0)
 ```
 
-- [ ] **Step 7: 손상된 파일 대체 경로 수동 확인**
+(4)번의 경고 메시지 뒤에 붙는 파서 오류 문구는 손상시킨 텍스트의 정확한 모양에 따라 달라질 수 있다 — 중요한 것은 경고가 출력되고 이어서 기본값이 복원된다는 사실이다.)
 
-Run (PowerShell): `Set-Content -Path .\build\x64\Debug\save.json -Value '{not valid json' -Encoding utf8`
-Run: `.\build\x64\Debug\DataPersistence.exe`
-Expected: 1)번 출력 직전에 다음 경고가 먼저 출력되고, 이후 출력은 Step 6과 동일 (기본값 `Hero`/레벨 1로 시작):
-
-```
-저장 파일이 손상되어 기본값으로 대체합니다: Expected ',' or '}' in JSON object
-```
-
-- [ ] **Step 8: 커밋**
+- [ ] **Step 7: 커밋**
 
 ```bash
 git add DataPersistence/SaveManager.h DataPersistence/SaveManager.cpp DataPersistence/main.cpp DataPersistence/DataPersistence.vcxproj DataPersistence/DataPersistence.vcxproj.filters

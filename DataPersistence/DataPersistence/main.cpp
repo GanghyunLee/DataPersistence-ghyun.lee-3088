@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include "SaveManager.h"
@@ -32,6 +33,14 @@ int main() {
     std::cout << std::endl << "3) 다시 로드 (저장된 값 복원 기대):" << std::endl;
     PlayerSaveData reloaded = SaveManager::load(savePath);
     printData(reloaded);
+
+    std::cout << std::endl << "4) 손상된 파일 로드 (경고 후 기본값 기대):" << std::endl;
+    {
+        std::ofstream corrupted(savePath, std::ios::trunc);
+        corrupted << "{not valid json";
+    }
+    PlayerSaveData afterCorruption = SaveManager::load(savePath);
+    printData(afterCorruption);
 
     return 0;
 }
