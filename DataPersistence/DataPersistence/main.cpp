@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -15,6 +17,8 @@ void printData(const PlayerSaveData& data) {
 }
 
 int main() {
+    SetConsoleOutputCP(CP_UTF8);
+
     const std::string savePath = "save.json";
     std::filesystem::remove(savePath);
 
